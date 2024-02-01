@@ -1,12 +1,19 @@
 let app = document.getElementById("app");
 // app.style = "border: 1px solid black; width: 90%; margin:auto;  display:flex; justify-content: space-evenly; flex-wrap:wrap;";
 
+//cosas del js
+let pokemon = [];
+let estado;
+
+//botones
 let nextBtn = document.getElementById("nextBtn");
 let prevBtn = document.getElementById("prevBtn");
 let resetBtn = document.getElementById("resetBtn");
 let searchInput = document.getElementById("searchInput");
 let searchButton = document.getElementById("searchBtn");
 
+
+//paginacion, cantidad de pokemon a buscar
 let pagination = document.createElement("div");
 pagination.className = "pagination";
 pagination.style = "display: block; width: 100%; height:35px; text-align:center;"
@@ -17,6 +24,7 @@ pagNumber.id = "pagNumber"
 pagNumber.value = 10
 pagination.append(pagNumber)
 
+//eventlisteners de botones
 pagNumber.addEventListener("change", async () => {
     let e = await fetchPokemon(null, pagNumber.value)
     if (e == "error") {
@@ -27,9 +35,9 @@ pagNumber.addEventListener("change", async () => {
 })
 
 searchButton.addEventListener("click", async () => {
-    let e = await searchPokemon(searchInput.value)
+    let e = await searchPokemon(searchInput.value.toLowerCase())
     if (e == "error") {
-        showError()
+        showError(searchInput.value)
     } else {
         renderPokemon()
     }
@@ -50,18 +58,12 @@ prevBtn.addEventListener("click", async () => {
     renderPokemon()
 })
 
-let pokemon = [];
 
-// .then(res => res.json())
-// .then(data => {
-//     pokemon = data.results
-//     console.log(pokemon)
-// })
-
-function showError() {
+//fuinciones
+function showError(name) {
     app.innerHTML = ""
     let span = document.createElement("span")
-    span.innerHTML = "Pokemon not found"
+    span.innerHTML = `Pokemon ${name} not found`
     span.className = "error-message"
     app.appendChild(span)
 }
@@ -73,9 +75,12 @@ async function searchPokemon(name) {
     }
     try {
         res = await fetch(`https://pokeapi.co/api/v2/pokemon/${name}`)
+        if (res.status == 404) {
+            return "error"
+        }
         res = await res.json()
-        console.log(res)
         pokemon = res
+        return res
     }
     catch (err) {
         console.log(err)
@@ -94,15 +99,18 @@ async function fetchPrevious() {
     }
 }
 
-async function fetchPokemon(offset, number) {
+async function fetchPokemon(url, number) {
     let res
-    console.log(offset,number,'desd efetcdh')
-    if (offset != null) {
-        res = await fetch(offset)
-    } else if(number==null){
-        res = await fetch('https://pokeapi.co/api/v2/pokemon?limit=10&offset=0');
-    }else {
-        res = await fetch(`https://pokeapi.co/api/v2/pokemon?limit=${number}&offset=0`);
+    console.log(url, number, 'desd efetcdh')
+    if (url != null) {
+        res = await fetch(url)
+        estado = url
+    } else if (number == null) {
+        estado = 'https://pokeapi.co/api/v2/pokemon?limit=10&offset=0'
+        res = await fetch(estado);
+    } else {
+        estado = `https://pokeapi.co/api/v2/pokemon?limit=${number}&offset=0`
+        res = await fetch(estado);
     }
     res = await res.json();
     // pokemon = []
@@ -112,67 +120,95 @@ async function fetchPokemon(offset, number) {
     pokemon = res;
 }
 
+async function showPokemon(name) {
+    let res = await searchPokemon(name)
+    console.log(res);
+
+    delete res['moves']
+    delete res['game_indices']
+
+    let container = document.createElement("div");
+    container.style = "width: 100%; margin: 10px; box-sizing: border-box; text-align:center; background: white; padding:10px; user-select: none;";
+    let pokehtml= document.createElement("div");
+    let backButton = document.createElement("button");
+    backButton.innerHTML = "Back";
+    backButton.addEventListener("click", () => {
+        renderPokemon()
+    })
+    container.append(backButton)
+
+    let pokeimage = document.createElement("img");
+    pokeimage.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${res.id}.png`;
+    container.appendChild(pokeimage);
+
+    // for (result in res) {
+    //     let type = document.createElement("p")
+    //     type.innerHTML = result+ ": "+ res[result]
+    //     container.appendChild(type)
+    // }
+
+    for (let result in res) {
+        if (res.hasOwnProperty(result)) {
+            if(res[result].length!=(undefined||0)){
+            let type = document.createElement("p");
+            type.innerHTML = result + ": " + res[result];
+            pokehtml.appendChild(type);
+            }
+        }
+    }
+
+    container.appendChild(pokehtml);
+    app.innerHTML = "";
+    app.appendChild(container)
+
+}
+
 async function renderPokemon() {
     app.innerHTML = "";
 
-    console.log(pokemon)
+    console.log(pokemon);
 
-    if (pokemon.results) {
-        if (pokemon.results.length != undefined) {
-            for (item of pokemon.results) {
-
-                let poke = await fetch(item.url);
-
-                poke = await poke.json();
-
-
-                pokehtml = document.createElement("div");
-                // pokehtml.className = "pagination";
-                pokehtml.style = "width: 15vw; margin: 10px; box-sizing: border-box; text-align:center; background: white; padding:10px; user-select: none;";
-
-                pokename = document.createElement("p");
-                item.name = item.name[0].toUpperCase() + item.name.slice(1)
-                pokename.innerHTML = item.name;
-                pokename.style = "display: flex;justify-content: center;margin-top: 20px;"
-
-                let pokeimage = document.createElement("img");
-                pokeimage.src = poke.sprites.other["official-artwork"].front_default;
-                pokeimage.style = "width: 100%; height: auto;";
-
-                pokehtml.appendChild(pokeimage);
-                pokehtml.appendChild(pokename);
-
-
-                // div.appendChild(pokehtml);
-                app.appendChild(pokehtml);
-            }
-        }
-    } else {
-        console.log(pokemon);
-
-
-        pokehtml = document.createElement("div");
-        // pokehtml.className = "pagination";
+    const createPokemonElement = (name, imageUrl) => {
+        const pokehtml = document.createElement("div");
         pokehtml.style = "width: 15vw; margin: 10px; box-sizing: border-box; text-align:center; background: white; padding:10px; user-select: none;";
+        pokehtml.style.cursor = "pointer";
 
-        pokename = document.createElement("p");
-        pokemon.name = pokemon.name[0].toUpperCase() + pokemon.name.slice(1)
-        pokename.innerHTML = pokemon.name;
-        pokename.style = "text-weight: 900;";
-        pokename.className = "pagination";
+        const pokename = document.createElement("p");
+        const capitalizedPokeName = name[0].toUpperCase() + name.slice(1);
 
-        let pokeimage = document.createElement("img");
-        pokeimage.src = pokemon.sprites.other["official-artwork"].front_default;
+        pokename.innerHTML = capitalizedPokeName;
+        pokename.style = "display: flex;justify-content: center;margin-top: 20px;";
+
+        const pokeimage = document.createElement("img");
+        pokeimage.src = imageUrl;
         pokeimage.style = "width: 100%; height: auto;";
 
         pokehtml.appendChild(pokeimage);
         pokehtml.appendChild(pokename);
+        pokehtml.addEventListener("click", async () => {
+            console.log(name, 'aneiasdksandsankdjasnksda')
+            await showPokemon(name)
+        })
 
-
-        // div.appendChild(pokehtml);
         app.appendChild(pokehtml);
+    };
+
+    if (pokemon.results && pokemon.results.length) {
+        for (const item of pokemon.results) {
+            const poke = await fetch(item.url);
+            const pokeData = await poke.json();
+
+            const imageUrl = pokeData.sprites.other["official-artwork"].front_default;
+            console.log("XDDXDDD");
+            createPokemonElement(item.name, imageUrl);
+        }
+    } else {
+        const imageUrl = pokemon.sprites.other["official-artwork"].front_default;
+        console.log("no");
+        createPokemonElement(pokemon.name, imageUrl);
     }
 }
+
 
 window.onload = async () => {
 
