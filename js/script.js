@@ -135,11 +135,17 @@ async function showPokemon(name) {
     backButton.addEventListener("click", () => {
         renderPokemon()
     })
-    container.append(backButton)
+let backButtonContainer = document.createElement("div")
+    backButtonContainer.append(backButton)
+    backButtonContainer.style ="width: 100%; text-align: center; margin-bottom: 10px;"
+
+    container.append(document.createElement('br'))
+    container.style= "display: flex; flex-direction: row; flex-wrap:wrap;"
 
     let pokeimage = document.createElement("img");
     pokeimage.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${res.id}.png`;
-    container.appendChild(pokeimage);
+    pokeimage.style = ""
+    container.append(pokeimage);
 
     // for (result in res) {
     //     let type = document.createElement("p")
@@ -159,6 +165,8 @@ async function showPokemon(name) {
 
     container.appendChild(pokehtml);
     app.innerHTML = "";
+    app.append(backButtonContainer)
+
     app.appendChild(container)
 
 }
