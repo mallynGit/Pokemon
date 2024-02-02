@@ -120,31 +120,119 @@ async function fetchPokemon(url, number) {
     pokemon = res;
 }
 
+// function recursiveRender(obj, html) {
+//     let yes = html
+//     for (let key in obj) {
+//         if (typeof key == 'object') {
+//             recursiveRender(key, yes)
+//         } else {
+//             let prop = document.createElement('p')
+//             prop.innerHTML = key + ': ' + obj[key]
+//             yes.appendChild(prop)
+//         }
+//     }
+// }
+
+async function renderInfoFull(pokemon) {
+    let types;
+    let name = document.createElement('p').innerHTML = `Name: ${pokemon.name} \n`
+    let id = document.createElement('p').innerHTML = `ID: ${pokemon.id} \n`
+    let height = document.createElement('p').innerHTML = `Height: ${pokemon.height / 10}m \n`
+    let weight = document.createElement('p').innerHTML = `Weight: ${pokemon.weight / 10}kg \n`
+    let species = document.createElement('p').innerHTML = `Species: ${pokemon.species.name} \n`
+    let typeInteractions = {
+        halfFrom: [],
+        halfTo: [],
+        doubleFrom: [],
+        doubleTo: [],
+        noneFrom: [],
+        noneTo: [],
+    }
+    for (item of pokemon.types) {
+        console.log(item, 'test');
+        let p = await fetch(item.type.url)
+        p = await p.json()
+        typeInteractions.doubleFrom = typeInteractions.doubleFrom.concat(p.damage_relations.double_damage_from)
+        typeInteractions.doubleTo = typeInteractions.doubleTo.concat(p.damage_relations.double_damage_to)
+        typeInteractions.halfFrom = typeInteractions.halfFrom.concat(p.damage_relations.half_damage_from)
+        typeInteractions.halfTo = typeInteractions.halfTo.concat(p.damage_relations.half_damage_to)
+        typeInteractions.noneFrom = typeInteractions.noneFrom.concat(p.damage_relations.no_damage_from)
+        typeInteractions.noneTo = typeInteractions.noneTo.concat(p.damage_relations.no_damage_to)
+    }
+
+
+
+    console.log(typeInteractions, 'relations');
+    if (pokemon.types.length == 2) {
+        types = document.createElement('p').innerHTML = `Types: ${pokemon.types[0].type.name} & ${pokemon.types[1].type.name} \n`
+    } else {
+        types = document.createElement('p').innerHTML = `Types: ${pokemon.types[0].type.name} \n`
+    }
+    let stats = document.createElement('div')
+    stats.append(document.createElement('p').innerHTML = "Stats: ")
+    for (stat of pokemon.stats) {
+        let statHtml = document.createElement('p')
+        statHtml.innerHTML = ` - ${stat.stat.name}: ${stat.base_stat}`
+        console.log(stat)
+        stats.append(statHtml)
+    }
+    let interactions = document.createElement('div')
+    for (let [key, value] of Object.entries(typeInteractions)) {
+        let htm = document.createElement('p')
+        htm.innerHTML = `${key} - ${value} `
+        
+        interactions.append(htm)
+    }
+
+
+    let pokehtml = document.createElement('div')
+
+    pokehtml.append(name, id, height, weight, species, types, stats, interactions)
+
+
+    return pokehtml
+
+}
+
 async function showPokemon(name) {
     let res = await searchPokemon(name)
     console.log(res);
 
-    delete res['moves']
-    delete res['game_indices']
+    const relevantProperties = [
+        "name",
+        "id",
+        "height",
+        "weight",
+        "species",
+        "types",
+        "stats",
+        "flavor_text_entries" // Include flavor_text_entries to get flavor_text
+        // Add more properties as needed
+    ];
+
+    // Filter the object to include only relevant properties
+    let relevantInfo = Object.fromEntries(
+        Object.entries(res).filter(([key]) => relevantProperties.includes(key))
+    );
 
     let container = document.createElement("div");
     container.style = "width: 100%; margin: 10px; box-sizing: border-box; text-align:center; background: white; padding:10px; user-select: none;";
-    let pokehtml= document.createElement("div");
+    let pokehtml = document.createElement("div");
     let backButton = document.createElement("button");
     backButton.innerHTML = "Back";
     backButton.addEventListener("click", () => {
         renderPokemon()
     })
-let backButtonContainer = document.createElement("div")
+    let backButtonContainer = document.createElement("div")
     backButtonContainer.append(backButton)
-    backButtonContainer.style ="width: 100%; text-align: center; margin-bottom: 10px;"
+    backButtonContainer.style = "width: 100%; text-align: center; margin-bottom: 10px;"
 
     container.append(document.createElement('br'))
-    container.style= "display: flex; flex-direction: row; flex-wrap:wrap;"
+    container.style = "display: flex; flex-direction: row; flex-wrap:wrap;"
 
     let pokeimage = document.createElement("img");
     pokeimage.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${res.id}.png`;
-    pokeimage.style = ""
+    pokeimage.style = "height: 50vh"
     container.append(pokeimage);
 
     // for (result in res) {
@@ -153,17 +241,8 @@ let backButtonContainer = document.createElement("div")
     //     container.appendChild(type)
     // }
 
-    for (let result in res) {
-        if (res.hasOwnProperty(result)) {
-            if(res[result].length!=(undefined||0)){
-            let type = document.createElement("p");
-            type.innerHTML = result + ": " + res[result];
-            pokehtml.appendChild(type);
-            }
-        }
-    }
-
-    container.appendChild(pokehtml);
+    console.log(relevantInfo)
+    container.appendChild(await renderInfoFull(relevantInfo));
     app.innerHTML = "";
     app.append(backButtonContainer)
 
@@ -203,15 +282,14 @@ async function renderPokemon() {
 
     if (pokemon.results && pokemon.results.length) {
         for (const item of pokemon.results) {
-            const poke = await fetch(item.url);
-            const pokeData = await poke.json();
-
-            const imageUrl = pokeData.sprites.other["official-artwork"].front_default;
+            console.log(item);
+            let id = item.url.split("/")[6]
+            const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
             console.log("XDDXDDD");
             createPokemonElement(item.name, imageUrl);
         }
     } else {
-        const imageUrl = pokemon.sprites.other["official-artwork"].front_default;
+        const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.id}.png`
         console.log("no");
         createPokemonElement(pokemon.name, imageUrl);
     }
