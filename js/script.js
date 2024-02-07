@@ -57,6 +57,12 @@ pagNumber.addEventListener("change", async () => {
     }
 })
 
+searchInput.addEventListener("keyup", (e) => {
+    if (e.key == "Enter") {
+        searchButton.click()
+    }
+})
+
 searchButton.addEventListener("click", async () => {
     let e = await searchPokemon(searchInput.value.toLowerCase())
     if (e == "error") {
@@ -129,7 +135,7 @@ function addFavorite(name, id) {
 }
 
 function removeFavorite(name) {
-    favPoke.splice(favPoke.indexOf(name), 1)
+    favPoke.splice(favPoke.findIndex(obj => obj.name == name), 1)
     localStorage.setItem("favPoke", JSON.stringify(favPoke));
     let fav = document.querySelector('#fav')
     fav.innerHTML = "Añadir a favoritos"
